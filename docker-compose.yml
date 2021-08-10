@@ -1,0 +1,187 @@
+version: "3"
+services:
+
+  homeassistant:
+    container_name: home-assistant
+    image: homeassistant/home-assistant:stable
+    volumes:
+      - ./homeassistant:/config
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+    environment:
+      - TZ=America/New_York
+    restart: always
+    network_mode: host
+  influx:
+    container_name: influx
+    image: influxdb
+#    ports:
+#      - 8083:8083
+#      - 8086:8086
+#      - 9092:9092
+    volumes:
+      - influx_data:/var/lib/influxdb
+    environment:
+      - TZ=America/New_York
+    network_mode: host
+  MQTT:
+    container_name: MQTT
+    image: eclipse-mosquitto:1.6.13
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto_logs:/mosquitto/log
+      - mosquitto_data:/mosquitto/data
+    environment:
+      - TZ=America/New_York
+    restart: always
+    ports:
+      - 1883:1883
+      - 9001:9001
+  zwavejs2mqtt:
+    container_name: zwavejs2mqtt
+    image: zwavejs/zwavejs2mqtt:latest
+    restart: always
+    tty: true
+    stop_signal: SIGINT
+    environment:
+      - TZ=America/New_York
+    devices:
+      - '/dev/ttyACM0:/dev/ttyACM0'
+    volumes:
+      - zwavejsmqtt_data:/usr/src/app/store'
+#    ports:
+#      - '8091:8091' # port for web interface
+#      - '3000:3000' # port for zwave-js websocket server
+    network_mode: host
+#  ozwdaemon:
+#    container_name: ozwdeamon
+#    image: openzwave/ozwdaemon:latest
+#    volumes:
+#      - ozw_data:/opt/ozw/config
+#    environment:
+#      - TZ=America/New_York
+#    restart: always
+#    devices:
+#      - /dev/ttyACM0
+#    environment:
+#      - MQTT_SERVER=MQTT
+#      - USB_PATH=/dev/ttyACM0
+#    ports:
+#      - 1983:1983
+  grafana:
+    container_name: graphana
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - TZ=America/New_York
+    restart: always
+    ports:
+      - 3001:3000
+  chronograf:
+    container_name: chronograf
+    image:  chronograf:latest
+    volumes:
+      - chronograf_data:/var/lib/chronograf
+    environment:
+      - TZ=America/New_York
+    restart: always
+    ports:
+      - 8888:8888
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce
+    command: -H unix:///var/run/docker.sock
+    restart: always
+    ports:
+      - 9000:9000
+      - 8000:8000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+  node-red:
+    container_name: node-red
+    image: nodered/node-red
+    restart: always
+    ports:
+      - 1880:1880
+    volumes:
+      - node_red_data:/data
+  esphome:
+    container_name: esphome
+    image: esphome/esphome
+    environment:
+      - TZ=America/New_York
+    restart: always
+    network_mode: host
+    volumes:
+      - esphome_config:/config
+
+  lms:
+    container_name: lms
+    image: lmscommunity/logitechmediaserver
+    volumes:
+      - lms_config:/config:rw
+      - lms_music:/music:ro
+      - lms_playlist:/playlist:rw
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    ports:
+      - 9002:9002/tcp
+      - 9090:9090/tcp
+      - 3483:3483/tcp
+      - 3483:3483/udp
+    environment:
+      - HTTP_PORT=9002
+      - TZ=America/New_York
+    restart: always
+
+  roomassistant:
+    container_name: room-assistant
+    image: mkerix/room-assistant
+    volumes:
+      - ./room-assistant:/room-assistant/config
+      - /var/run/dbus:/var/run/dbus
+    environment:
+      - TZ=America/New_York
+    restart: always
+    network_mode: host
+
+  mongo:
+    container_name: mongodb
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME:root
+      - MONGO_INITDB_ROOT_PASSWORD:max4905home
+
+  grav:
+    build: ./grav/
+    network_mode: host
+#    ports:
+#      - 80:80
+    volumes:
+      - grav-data:/var/www/html
+
+volumes:
+  portainer_data:
+  node_red_data:
+  chronograf_data:
+  grafana_data:
+  ozw_data:
+  influx_data:
+  mosquitto_logs:
+  mosquitto_data:
+  esphome_config:
+  lms_config:
+  lms_playlist:
+  lms_music:
+  zwavejsmqtt_data:
+  grav-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/grav
+      o: bind
